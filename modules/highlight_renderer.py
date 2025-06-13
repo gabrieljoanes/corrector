@@ -7,38 +7,45 @@ def render_highlighted_text(original_text, corrections, decisions, focus_idx=Non
         st.markdown(original_text)
         return
 
+    # Create output in segments
+    result = []
+    cursor = 0
+    offset = 0
+
+    # Sort by start index
     sorted_corrections = sorted(
         [(i, c) for i, c in enumerate(corrections) if decisions.get(i) != "rejected"],
-        key=lambda x: x[1]["start_idx"],
-        reverse=True
+        key=lambda x: x[1]["start_idx"]
     )
-
-    text = original_text
 
     for i, corr in sorted_corrections:
         start = corr["start_idx"]
         end = corr["end_idx"]
-        if start < 0 or end > len(text):
-            continue
 
-        mistake = text[start:end]
+        if start < cursor or end > len(original_text):
+            continue  # skip invalid or overlapping spans
+
+        # Add unmodified text before this correction
+        result.append(st.markdown(html_escape(original_text[cursor:start]), unsafe_allow_html=True))
+
+        mistake = original_text[start:end]
         correction = corr["after"]
+        label = f"[# {i + 1}]"
 
-        label = f"<span style='font-size: 0.8em; color: gray;'>[# {i+1}]</span>"
-
-        before_html = f"<span style='color: red; text-decoration: line-through;'>{mistake}</span>"
-        after_html = f"<span style='color: green; font-weight: bold;'>{correction}</span>"
+        before_html = f"<span style='color: red; text-decoration: line-through;'>{html_escape(mistake)}</span>"
+        after_html = f"<span style='color: green; font-weight: bold;'>{html_escape(correction)}</span>"
 
         if i == focus_idx:
             wrapper_style = "background-color: #fff3cd; padding: 4px 6px; border-radius: 4px;"
-            replacement = f"<span style='{wrapper_style}'>{before_html}&nbsp;&nbsp;{after_html}&nbsp;&nbsp;{label}</span>"
+            combined = f"<span style='{wrapper_style}'>{before_html}&nbsp;&nbsp;{after_html}&nbsp;&nbsp;<span style='font-size: 0.8em; color: gray;'>{label}</span></span>"
         else:
-            replacement = f"{before_html}&nbsp;&nbsp;{after_html}&nbsp;&nbsp;{label}"
+            combined = f"{before_html}&nbsp;&nbsp;{after_html}&nbsp;&nbsp;<span style='font-size: 0.8em; color: gray;'>{label}</span>"
 
-        text = text[:start] + f" {replacement} " + text[end:]
+        result.append(st.markdown(combined, unsafe_allow_html=True))
+        cursor = end
 
-    # Display corrected text with inline HTML
-    st.markdown(text, unsafe_allow_html=True)
+    # Add remaining text
+    result.append(st.markdown(html_escape(original_text[cursor:]), unsafe_allow_html=True))
 
     # Human-readable debug summary
     st.markdown("---")
@@ -53,7 +60,7 @@ def render_highlighted_text(original_text, corrections, decisions, focus_idx=Non
 - **Span**: `{corr["start_idx"]}–{corr["end_idx"]}`
 """)
 
-    # Machine-readable block for AI debugging
+    # Machine-readable JSON block
     st.markdown("---")
     st.subheader("📦 Copy for AI Debugging")
     debug_data = [
@@ -68,3 +75,11 @@ def render_highlighted_text(original_text, corrections, decisions, focus_idx=Non
         for i, corr in enumerate(corrections)
     ]
     st.code(debug_data, language="json")
+
+
+def html_escape(text):
+    return (text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#x27;"))
