@@ -1,17 +1,13 @@
 import streamlit as st
-import re
+import string
 
 def render_highlighted_text(original_text, corrections, decisions, focus_idx=None):
     st.subheader("Corrected Text")
 
-    if not corrections:
-        st.markdown(original_text)
-        return
-
     result = []
     cursor = 0
-    working_text = original_text
-    used_spans = set()
+    text = original_text
+    final_output = ""
 
     for i, corr in enumerate(corrections):
         if decisions.get(i) == "rejected":
@@ -20,25 +16,30 @@ def render_highlighted_text(original_text, corrections, decisions, focus_idx=Non
         before = corr["before"]
         after = corr["after"]
 
-        # Match whole word only
-        pattern = r'\b{}\b'.format(re.escape(before))
-        match = re.search(pattern, working_text[cursor:])
+        # Find match with boundary-aware logic
+        search_pos = cursor
+        while True:
+            idx = text.find(before, search_pos)
+            if idx == -1:
+                break
 
-        if not match:
+            pre = text[idx - 1] if idx > 0 else " "
+            post = text[idx + len(before)] if idx + len(before) < len(text) else " "
+
+            if pre in string.whitespace + string.punctuation and post in string.whitespace + string.punctuation:
+                break
+            else:
+                search_pos = idx + 1
+
+        if idx == -1:
             continue
 
-        span_start = cursor + match.start()
-        span_end = cursor + match.end()
-
-        # Add text before match
-        result.append(working_text[cursor:span_start])
-
-        # Add formatted correction
+        result.append(text[cursor:idx])
         result.append(f"(~~{before}~~)!{after}!")
+        cursor = idx + len(before)
 
-        cursor = span_end
+    result.append(text[cursor:])
+    final_output = ''.join(result)
 
-    result.append(working_text[cursor:])
-
-    final_text = ''.join(result)
-    st.markdown(final_text)
+    st.markdown(final_output)
+    st.text_area("📋 Copy Output", value=final_output, height=150)
