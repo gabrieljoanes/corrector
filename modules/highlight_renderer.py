@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import string
 
 def render_highlighted_text(original_text, corrections, decisions, focus_idx=None):
@@ -41,5 +42,11 @@ def render_highlighted_text(original_text, corrections, decisions, focus_idx=Non
     result.append(text[cursor:])
     final_output = ''.join(result)
 
+    # Show final output
     st.markdown(final_output)
-    st.text_area("📋 Copy Output", value=final_output, height=150)
+
+    # Add copy button
+    components.html(f"""
+        <textarea id='outputText' style='width:100%; height:150px;'>{final_output}</textarea>
+        <button onclick="navigator.clipboard.writeText(document.getElementById('outputText').value)">📋 Copy Output</button>
+    """, height=200)
