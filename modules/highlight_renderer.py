@@ -8,31 +8,31 @@ def render_highlighted_text(original_text, corrections, decisions, focus_idx=Non
         return
 
     result = []
-    last_index = 0
-    shift = 0
+    cursor = 0
+    working_text = original_text
 
-    # Sort by start_idx to apply left-to-right
-    sorted_corrections = sorted(
-        [(i, c) for i, c in enumerate(corrections) if decisions.get(i) != "rejected"],
-        key=lambda x: x[1]["start_idx"]
-    )
+    for i, corr in enumerate(corrections):
+        if decisions.get(i) == "rejected":
+            continue
 
-    for i, corr in sorted_corrections:
-        start = corr["start_idx"]
-        end = corr["end_idx"]
+        before = corr["before"]
+        after = corr["after"]
+        idx = working_text.find(before, cursor)
 
-        # Add the text before this correction
-        if last_index < start:
-            result.append(original_text[last_index:start])
+        if idx == -1:
+            continue  # skip if not found
 
-        original = original_text[start:end]
-        corrected = corr["after"]
+        end = idx + len(before)
 
-        result.append(f"(~~{original}~~)!{corrected}!")
-        last_index = end
+        # Append untouched text
+        result.append(working_text[cursor:idx])
 
-    # Add remaining text
-    result.append(original_text[last_index:])
+        # Append corrected version
+        result.append(f"(~~{before}~~)!{after}!")
+
+        cursor = end
+
+    result.append(working_text[cursor:])
 
     final_text = ''.join(result)
     st.markdown(final_text)
