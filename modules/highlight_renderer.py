@@ -7,14 +7,12 @@ def render_highlighted_text(original_text, corrections, decisions, focus_idx=Non
         st.markdown(original_text)
         return
 
-    # Sort in reverse to avoid corrupting indices
     sorted_corrections = sorted(
         [(i, c) for i, c in enumerate(corrections) if decisions.get(i) != "rejected"],
         key=lambda x: x[1]["start_idx"],
         reverse=True
     )
 
-    # Work on a modifiable copy
     text = original_text
 
     for i, corr in sorted_corrections:
@@ -37,13 +35,12 @@ def render_highlighted_text(original_text, corrections, decisions, focus_idx=Non
         else:
             replacement = f"{before_html}&nbsp;&nbsp;{after_html}&nbsp;&nbsp;{label}"
 
-        # Replace original span with decorated version and spaces around for clarity
         text = text[:start] + f" {replacement} " + text[end:]
 
-    # Final render
+    # Display corrected text with inline HTML
     st.markdown(text, unsafe_allow_html=True)
 
-    # --- DEBUG OUTPUT ---
+    # Human-readable debug summary
     st.markdown("---")
     st.subheader("🛠 Debug View")
     for i, corr in enumerate(corrections):
@@ -55,3 +52,19 @@ def render_highlighted_text(original_text, corrections, decisions, focus_idx=Non
 - **Corrected**: `{corr["after"]}`
 - **Span**: `{corr["start_idx"]}–{corr["end_idx"]}`
 """)
+
+    # Machine-readable block for AI debugging
+    st.markdown("---")
+    st.subheader("📦 Copy for AI Debugging")
+    debug_data = [
+        {
+            "index": i + 1,
+            "status": decisions.get(i, "unknown"),
+            "before": corr["before"],
+            "after": corr["after"],
+            "start_idx": corr["start_idx"],
+            "end_idx": corr["end_idx"]
+        }
+        for i, corr in enumerate(corrections)
+    ]
+    st.code(debug_data, language="json")
