@@ -1,7 +1,8 @@
-import openai
+
+from openai import OpenAI
 import os
 
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Or use st.secrets if running on Streamlit Cloud
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def get_corrections(text):
     prompt = f"""
@@ -28,15 +29,17 @@ Input text:
 {text}
 """
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",  # or "gpt-3.5-turbo" for cost-efficiency
+    response = client.chat.completions.create(
+        model="gpt-4",
         messages=[{"role": "user", "content": prompt}],
         temperature=0
     )
 
+    content = response.choices[0].message.content.strip()
+
     try:
-        corrections = eval(response.choices[0].message.content.strip())
-    except Exception as e:
+        corrections = eval(content)
+    except Exception:
         corrections = []
 
     corrected_text = text
