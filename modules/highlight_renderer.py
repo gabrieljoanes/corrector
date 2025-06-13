@@ -8,29 +8,30 @@ def render_highlighted_text(original_text, corrections, decisions, focus_idx=Non
         st.markdown(original_text)
         return
 
-    # Sort corrections by start index descending to not affect following ranges
-    valid_corrections = [
-        (i, c) for i, c in enumerate(corrections)
-        if decisions.get(i) != "rejected" and c["start_idx"] != -1
-    ]
-    sorted_corrections = sorted(valid_corrections, key=lambda x: x[1]["start_idx"], reverse=True)
+    # Sort corrections in reverse so indices stay valid
+    sorted_corrections = sorted(
+        [(i, c) for i, c in enumerate(corrections) if decisions.get(i) != "rejected"],
+        key=lambda x: x[1]["start_idx"],
+        reverse=True
+    )
 
     text = html.escape(original_text)
 
     for i, corr in sorted_corrections:
         start = corr["start_idx"]
         end = corr["end_idx"]
+        if start < 0 or end > len(text):
+            continue
 
-        before = text[start:end]
-        after = html.escape(corr["after"])
+        before_html = f"<span style='color: red; text-decoration: line-through;'>{html.escape(text[start:end])}</span>"
+        after_html = f"<span style='color: green; font-weight: bold;'>{html.escape(corr['after'])}</span>"
 
-        style = (
-            "background-color: #ff7043; padding: 2px 4px; border-radius: 4px;"
-            if i == focus_idx else
-            "background-color: #fff176; padding: 2px 4px; border-radius: 4px;"
-        )
+        if i == focus_idx:
+            wrapper_style = "background-color: #fff3cd; padding: 2px 4px; border-radius: 4px;"
+            replacement = f"<span style='{wrapper_style}'>{before_html} {after_html}</span>"
+        else:
+            replacement = f"{before_html} {after_html}"
 
-        highlighted = f"<span style='{style}' title='Correction #{i+1}'>{after}</span>"
-        text = text[:start] + highlighted + text[end:]
+        text = text[:start] + replacement + text[end:]
 
     st.markdown(text, unsafe_allow_html=True)
